@@ -3,12 +3,12 @@ const asyncWrapper = require('../middleware/async')
 const {createCustomError} = require('../errors/custom_error')
 
 const getAllTasks = asyncWrapper( async (req, res) => {
-    const tasks = await Task.find({})
+    const tasks = await Task.find({createdBy: req.user._id})
     res.status(200).json({tasks})
 })
 
 const createTask = asyncWrapper( async (req, res) => {
-    const task = await Task.create(req.body)
+    const task = await Task.create({...req.body,createdBy:req.user._id})
     res.status(201).json({task})
 })
 
@@ -17,6 +17,10 @@ const getTask = asyncWrapper( async (req, res, next) => {
     const task = await Task.findOne({_id:taskID})
     if (!task){
         return next(createCustomError(`No task with id : ${taskID}`,404))
+    }
+
+    if (task.createdBy.toString() !== req.user._id.toString()){
+        return res.status(401).json({ success: false, message: "Unauthorized - it's not your task" });
     }
     res.status(200).json({task})
 })
